@@ -12,7 +12,7 @@ ARCH_ARM_HAVE_TLS_REGISTER      := true
 TARGET_BOOTLOADER_BOARD_NAME    := SC7727S
 TARGET_KERNEL_CONFIG            := young2ve3g_hw00_defconfig
 TARGET_KERNEL_SOURCE            := kernel/samsung/young2ve3g
-BOARD_KERNEL_CMDLINE            := console=ttyS1,115200n8
+BOARD_KERNEL_CMDLINE            := console=ttyS1,115200n8 androidboot.selinux=permissive
 BOARD_KERNEL_BASE               := 0x00000000
 BOARD_KERNEL_PAGESIZE           := 2048
 BOARD_MKBOOTIMG_ARGS            := --kernel_offset 0x00008000 --ramdisk_offset 0x01000000 --tags_offset 0x00000100 --dt device/samsung/young2ve3g/prebuilt/dtb
