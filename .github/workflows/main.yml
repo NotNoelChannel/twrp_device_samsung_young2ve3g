@@ -1,0 +1,80 @@
+name: TWRP CI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: TWRP Build CI
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-24.04]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Installing JDK 7 + Build Dependencies
+      run: |
+        sudo dpkg --add-architecture i386
+        sudo apt-get update
+        sudo apt-get install -y software-properties-common
+        sudo add-apt-repository ppa:deadsnakes/ppa
+        sudo add-apt-repository universe
+        sudo apt-get update
+        sudo apt-get install -y \
+          gperf gcc-multilib g++-multilib \
+          gcc-10-multilib g++-10-multilib \
+          libc6-dev \
+          libncurses-dev:i386 \
+          zlib1g-dev:i386 libreadline-dev:i386 \
+          libgl1-mesa-dev libxml2-utils xsltproc bc ccache liblz4-tool \
+          libsdl1.2-dev libxml2 lzop pngcrush schedtool \
+          squashfs-tools imagemagick libbz2-dev lzma ncftp \
+          qemu-user-static libstdc++-10-dev axel tree \
+          libwxgtk3.2-dev x11proto-core-dev libx11-dev \
+          build-essential \
+          libssl-dev libbz2-dev libreadline-dev \
+          libsqlite3-dev libncurses5-dev libncursesw5-dev \
+          libffi-dev liblzma-dev zlib1g-dev wget
+        cd /usr/local/src
+        sudo wget https://www.python.org/ftp/python/2.7.18/Python-2.7.18.tgz
+        sudo tar xvf Python-2.7.18.tgz
+        cd Python-2.7.18
+        sudo ./configure --enable-optimizations
+        sudo make altinstall
+        mkdir ~/.jdk_7
+        cd ~/.jdk_7
+        axel -q -n $(nproc --all) https://download.java.net/openjdk/jdk7u75/ri/openjdk-7u75-b13-linux-x64-18_dec_2014.tar.gz
+        tar -xzf openjdk-7u75-b13-linux-x64-18_dec_2014.tar.gz
+        sudo ln -sf /usr/local/bin/python2.7 /usr/bin/python2
+        sudo ln -sf /usr/local/bin/python2.7 /usr/bin/python
+    - name: Syncing TWRP sources
+      run: |
+        mkdir ~/TWRP
+        cd ~/TWRP
+        mkdir ~/.bin
+        curl http://commondatastorage.googleapis.com/git-repo-downloads/repo > ~/.bin/repo
+        python3 ~/.bin/repo init --depth=1 -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_omni.git -b twrp-6.0
+        git clone --branch main --single-branch https://github.com/NotNoelChannel/twrp_device_samsung_young2ve3g.git ~/TWRP/device/samsung/young2ve3g
+        git clone --branch cm-13.0 --single-branch https://github.com/unlegacy-devices/android_kernel_samsung_young2ve3g.git ~/TWRP/kernel/samsung/young2ve3g
+        python3 ~/.bin/repo sync -c --force-sync --optimized-fetch --no-tags --no-clone-bundle --prune -j$(nproc --all)
+    - name: Building TWRP
+      run: |
+        OLDPATH=$PATH
+        OLDJAVAHOME=$JAVA_HOME
+        export PATH="$HOME/.jdk_7/java-se-7u75-ri/bin:$PATH"
+        export JAVA_HOME="$HOME/.jdk_7/java-se-7u75-ri"
+        cd ~/TWRP
+        source build/envsetup.sh
+        export ALLOW_MISSING_DEPENDENCIES=true
+        export LC_ALL=C
+        lunch omni_young2ve3g-eng
+        make -j$(nproc --all) recoveryimage
+        export PATH=$OLDPATH
+        export JAVA_HOME=$OLDJAVAHOME
+    - name: Uploading TWRP builds
+      uses: actions/upload-artifact@v4
+      with:
+        name: twrp
+        path: /home/runner/TWRP/out/target/product/young2ve3g/recovery.*
