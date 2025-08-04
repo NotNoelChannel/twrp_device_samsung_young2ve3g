@@ -5,11 +5,7 @@ on:
 
 jobs:
   build:
-    name: TWRP Build CI
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-24.04]
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
@@ -58,9 +54,11 @@ jobs:
         python3 ~/.bin/repo init --depth=1 -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_omni.git -b twrp-6.0
         git clone --branch main --single-branch https://github.com/NotNoelChannel/twrp_device_samsung_young2ve3g.git ~/TWRP/device/samsung/young2ve3g
         git clone --branch cm-13.0 --single-branch https://github.com/unlegacy-devices/android_kernel_samsung_young2ve3g.git ~/TWRP/kernel/samsung/young2ve3g
+        sudo git clone --depth 1 --branch android-4.4.4_r2.0.1 --single-branch https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-eabi-4.7 /opt/toolchains/arm-eabi-4.7/
         python3 ~/.bin/repo sync -c --force-sync --optimized-fetch --no-tags --no-clone-bundle --prune -j$(nproc --all)
     - name: Building TWRP
       run: |
+        export CROSS_COMPILE=/opt/toolchains/arm-eabi-4.7/bin/arm-eabi-
         OLDPATH=$PATH
         OLDJAVAHOME=$JAVA_HOME
         export PATH="$HOME/.jdk_7/java-se-7u75-ri/bin:$PATH"
